@@ -3,6 +3,8 @@
   <!-- interface-requires gtk+ 3.0 -->
   <object class="GtkListStore" id="list_store_drives">
     <columns>
+      <!-- column-name drive_path -->
+      <column type="gchararray"/>
       <!-- column-name drive_name -->
       <column type="gchararray"/>
       <!-- column-name mount_point -->
@@ -34,7 +36,7 @@
                 <child>
                   <object class="GtkCellRendererText" id="cell_renderer_drive_name"/>
                   <attributes>
-                    <attribute name="text">0</attribute>
+                    <attribute name="text">1</attribute>
                   </attributes>
                 </child>
               </object>
@@ -44,9 +46,11 @@
                 <property name="title" translatable="yes">Mount Point</property>
                 <property name="clickable">True</property>
                 <child>
-                  <object class="GtkCellRendererText" id="cell_renderer_mount_point"/>
+                  <object class="GtkCellRendererText" id="cell_renderer_mount_point">
+		    <property name="editable">True</property>
+		  </object>
                   <attributes>
-                    <attribute name="text">1</attribute>
+                    <attribute name="text">2</attribute>
                   </attributes>
                 </child>
               </object>
