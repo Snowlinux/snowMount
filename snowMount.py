@@ -15,6 +15,7 @@ class MainWindow:
         self.list_store_drives = self.builder.get_object("list_store_drives")
         self.cell_renderer_mount_point = self.builder.get_object("cell_renderer_mount_point")
 
+        driveReader.read_fstab()
         self.drive_list = driveReader.get_drive_list();
         for drive in self.drive_list:
             titer = self.list_store_drives.append(drive);
