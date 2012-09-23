@@ -2,7 +2,7 @@
 # Seperate content into different columns
 # For now it's the whole file.
 
-# DOES NOT WORK BECAUSE WEI2912 IS A PYTHON NOOB
+# DOES NOT WORK, IN NEED OF PEOPLE TO EDIT
 file = open(r'/etc/fstab', 'r').readlines()
 for line in logfile:
 	print line
