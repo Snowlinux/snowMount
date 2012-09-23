@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
+import os
+import sys
 import driveReader
 from gi.repository import Gtk, Gio
 
+DEBUG = False;
 class MainWindow:
 
     def __init__(self):
@@ -36,5 +39,10 @@ class MainWindow:
         print new_text
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        DEBUG = (sys.argv[1] == "DEBUG")
+    if os.getuid() != 0 and not DEBUG:
+        print "Please run SnowMount as root."
+        sys.exit(1)
     MainWindow()
     Gtk.main()
