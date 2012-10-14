@@ -1,11 +1,89 @@
 #!/usr/bin/env python
 
+import dircache
+import io
 import os
+import re
 import sys
-import driveReader
+
 from gi.repository import Gtk, Gio
 
 DEBUG = False;
+fstab = {}
+FSTAB_PATH = '/etc/fstab'
+
+##################################################
+#                  Drive Reader                  #
+##################################################
+
+def get_drive_list():
+    paths = _get_drive_paths()
+    content = []
+    for path in paths:
+        content.append([path, path, _get_mount_point(path)]) # To be implemented: Read drive name
+    return content
+
+def read_fstab():
+    fstab.clear()
+    f = io.open(FSTAB_PATH, 'r')
+    for line in f:
+        if not line.strip(): # Ignore empty lines
+            continue;
+        if "#" in line: # Ignore comments
+            continue;
+        if "/dev/" not in line: # Ignore non-local drives for the time being
+            continue;
+        while "  " in line:
+            line = line.replace("  ", " ")
+        drives = line.split(" ")
+        fstab[drives[0]] = drives[1]
+    f.close()
+    return fstab
+
+def write_mount_point(drive, mount_point):
+    new_line = ""
+    if mount_point:
+        new_line = drive + " " + mount_point + " auto defaults 0 0\n"
+    print "Writing line to " + FSTAB_PATH + ":\n" + new_line
+    try:
+        written = False
+        f = io.open(FSTAB_PATH, 'r')
+        lines = f.readlines()
+        f.close()
+
+        for line in lines:
+            if line.find(drive) == 0:
+                lines.remove(line)
+        lines.append(unicode(new_line))
+
+        f = io.open(FSTAB_PATH, 'w')
+
+        f.writelines(lines)
+        f.flush()
+        f.close()
+    except Exception, details:
+        print details
+
+def _get_mount_point(drive_path):
+    try:
+        return fstab[drive_path]
+    except Exception, details: # If it is not found in fstab
+        return ""
+
+def _get_drive_paths():
+    paths = dircache.listdir("/dev")
+    needed_paths = [];
+    for path in paths:
+        if re.match("sd\w\d", path):
+            needed_paths.append("%s%s" % ("/dev/", path))
+        if re.match("hd\w\d", path):
+            needed_paths.append("%s%s" % ("/dev/", path))
+    return needed_paths
+
+##################################################
+#                  Main Window                   #
+##################################################
+
 class MainWindow:
 
     def __init__(self):
@@ -18,8 +96,11 @@ class MainWindow:
         self.list_store_drives = self.builder.get_object("list_store_drives")
         self.cell_renderer_mount_point = self.builder.get_object("cell_renderer_mount_point")
 
-        driveReader.read_fstab()
-        self.drive_list = driveReader.get_drive_list();
+        read_fstab()
+        self.drive_list = get_drive_list();
+        self.drive_list_orig = []
+        for item in self.drive_list:
+            self.drive_list_orig.append(item[:])
         for drive in self.drive_list:
             titer = self.list_store_drives.append(drive);
 
@@ -30,13 +111,16 @@ class MainWindow:
         self.window.show_all()
 
     def on_button_ok_released(self, widget, event):
-        for drive in self.drive_list:
-            driveReader.write_drive_name(drive[0], drive[2]);
+        for i in range(len(self.drive_list)):
+            if self.drive_list[i][2] != self.drive_list_orig[i][2]:
+                write_mount_point(self.drive_list[i][0], self.drive_list[i][2]);
         Gtk.main_quit()
 
     def on_mount_point_edited(self, renderer, path, new_text):
-        # Update list store and self.drive_list - To be implemented
-        print new_text
+        self.drive_list[int(path)][2] = new_text
+
+        titer = self.list_store_drives.get_iter(path)
+        self.list_store_drives.set_value(titer, 2, new_text)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -44,5 +128,8 @@ if __name__ == "__main__":
     if os.getuid() != 0 and not DEBUG:
         print "Please run SnowMount as root."
         sys.exit(1)
+    if DEBUG:
+        FSTAB_PATH = '/tmp/fstab'
+
     MainWindow()
     Gtk.main()
