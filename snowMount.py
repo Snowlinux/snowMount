@@ -8,7 +8,8 @@ import sys
 
 from gi.repository import Gtk, Gio
 
-DEBUG = False;
+VERSION = 0.1
+DEBUG = False
 fstab = {}
 FSTAB_PATH = '/etc/fstab'
 
@@ -25,19 +26,22 @@ def get_drive_list():
 
 def read_fstab():
     fstab.clear()
-    f = io.open(FSTAB_PATH, 'r')
-    for line in f:
-        if not line.strip(): # Ignore empty lines
-            continue;
-        if "#" in line: # Ignore comments
-            continue;
-        if "/dev/" not in line: # Ignore non-local drives for the time being
-            continue;
-        while "  " in line:
-            line = line.replace("  ", " ")
-        drives = line.split(" ")
-        fstab[drives[0]] = drives[1]
-    f.close()
+    try:
+        f = io.open(FSTAB_PATH, 'r')
+        for line in f:
+            if not line.strip(): # Ignore empty lines
+                continue
+            if "#" in line: # Ignore comments
+                continue
+            if "/dev/" not in line: # Ignore non-local drives for the time being
+                continue
+            while "  " in line:
+                line = line.replace("  ", " ")
+            drives = line.split(" ")
+            fstab[drives[0]] = drives[1]
+        f.close()
+    except Exception, detail:
+        print detail
     return fstab
 
 def write_mount_point(drive, mount_point):
@@ -72,7 +76,7 @@ def _get_mount_point(drive_path):
 
 def _get_drive_paths():
     paths = dircache.listdir("/dev")
-    needed_paths = [];
+    needed_paths = []
     for path in paths:
         if re.match("sd\w\d", path):
             needed_paths.append("%s%s" % ("/dev/", path))
@@ -88,7 +92,7 @@ class MainWindow:
 
     def __init__(self):
         self.builder = Gtk.Builder()
-        self.builder.add_from_file("snowMount.ui");
+        self.builder.add_from_file("snowMount.ui")
 
         self.window = self.builder.get_object("window_main")
         self.button_cancel = self.builder.get_object("button_cancel")
@@ -97,12 +101,12 @@ class MainWindow:
         self.cell_renderer_mount_point = self.builder.get_object("cell_renderer_mount_point")
 
         read_fstab()
-        self.drive_list = get_drive_list();
+        self.drive_list = get_drive_list()
         self.drive_list_orig = []
         for item in self.drive_list:
             self.drive_list_orig.append(item[:])
         for drive in self.drive_list:
-            titer = self.list_store_drives.append(drive);
+            titer = self.list_store_drives.append(drive)
 
         self.button_cancel.connect("button-release-event", Gtk.main_quit)
         self.button_ok.connect("button-release-event", self.on_button_ok_released)
@@ -113,7 +117,7 @@ class MainWindow:
     def on_button_ok_released(self, widget, event):
         for i in range(len(self.drive_list)):
             if self.drive_list[i][2] != self.drive_list_orig[i][2]:
-                write_mount_point(self.drive_list[i][0], self.drive_list[i][2]);
+                write_mount_point(self.drive_list[i][0], self.drive_list[i][2])
         Gtk.main_quit()
 
     def on_mount_point_edited(self, renderer, path, new_text):
@@ -124,12 +128,15 @@ class MainWindow:
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        DEBUG = (sys.argv[1] == "DEBUG")
+        if "--dry-run" in sys.argv:
+            DEBUG = "--dry-run" in sys.argv
+            FSTAB_PATH = '/tmp/fstab'
+        if "--version" in sys.argv or "-v" in sys.argv:
+            print "SnowMount version " + str(VERSION)
+            sys.exit(1)
     if os.getuid() != 0 and not DEBUG:
         print "Please run SnowMount as root."
         sys.exit(1)
-    if DEBUG:
-        FSTAB_PATH = '/tmp/fstab'
 
     MainWindow()
     Gtk.main()
