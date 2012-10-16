@@ -8,7 +8,7 @@ import sys
 
 from gi.repository import Gtk, Gio
 
-VERSION = 0.1
+VERSION = "0.1.1"
 DEBUG = False
 fstab = {}
 FSTAB_PATH = '/etc/fstab'
@@ -46,9 +46,18 @@ def read_fstab():
 
 def write_mount_point(drive, mount_point):
     new_line = ""
+    # Create directory if it doesn't exist
+    if not os.path.exists(mount_point) and mount_point:
+        try:
+            os.makedirs(mount_point)
+            print "Creating directory " + mount_point
+        except Exception, detail:
+            print "Mount point " + mount_point + " does not exist and cannot be created: " + detail
+            return
+
     if mount_point:
         new_line = drive + " " + mount_point + " auto defaults 0 0\n"
-    print "Writing line to " + FSTAB_PATH + ":\n" + new_line
+        print "Writing line to " + FSTAB_PATH + ":\n" + new_line
     try:
         written = False
         f = io.open(FSTAB_PATH, 'r')
@@ -132,7 +141,7 @@ if __name__ == "__main__":
             DEBUG = "--dry-run" in sys.argv
             FSTAB_PATH = '/tmp/fstab'
         if "--version" in sys.argv or "-v" in sys.argv:
-            print "SnowMount version " + str(VERSION)
+            print "SnowMount version " + VERSION
             sys.exit(1)
     if os.getuid() != 0 and not DEBUG:
         print "Please run SnowMount as root."
