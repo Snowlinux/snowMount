@@ -8,7 +8,7 @@ import sys
 
 from gi.repository import Gtk, Gio
 
-VERSION = "0.1.1"
+VERSION = "1.0.1"
 DEBUG = False
 fstab = {}
 FSTAB_PATH = '/etc/fstab'
