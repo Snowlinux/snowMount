@@ -5,6 +5,7 @@ import io
 import os
 import re
 import sys
+import subprocess
 
 from gi.repository import Gtk, Gio
 
@@ -56,7 +57,7 @@ def write_mount_point(drive, mount_point):
             return
 
     if mount_point:
-        new_line = drive + " " + mount_point + " auto defaults 0 0\n"
+        new_line = "UUID=" + _get_UUID(drive) + " " + mount_point + " auto defaults 0 0\n"
         print "Writing line to " + FSTAB_PATH + ":\n" + new_line
     try:
         written = False
@@ -92,6 +93,13 @@ def _get_drive_paths():
         if re.match("hd\w\d", path):
             needed_paths.append("%s%s" % ("/dev/", path))
     return needed_paths
+
+def _get_UUID(device):
+    '''/dev/sda1 -> "f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'''
+
+    p = subprocess.check_output(['blkid', device])
+    return p.split()[2].split('=')[1]
+
 
 ##################################################
 #                  Main Window                   #
