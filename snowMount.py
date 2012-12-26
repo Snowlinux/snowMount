@@ -18,33 +18,6 @@ FSTAB_PATH = '/etc/fstab'
 #                  Drive Reader                  #
 ##################################################
 
-def get_drive_list():
-    paths = _get_drive_paths()
-    content = []
-    for path in paths:
-        content.append([path, path, _get_mount_point(path)]) # To be implemented: Read drive name
-    return content
-
-def read_fstab():
-    fstab.clear()
-    try:
-        f = io.open(FSTAB_PATH, 'r')
-        for line in f:
-            if not line.strip(): # Ignore empty lines
-                continue
-            if "#" in line: # Ignore comments
-                continue
-            if "/dev/" not in line: # Ignore non-local drives for the time being
-                continue
-            while "  " in line:
-                line = line.replace("  ", " ")
-            drives = line.split(" ")
-            fstab[drives[0]] = drives[1]
-        f.close()
-    except Exception, detail:
-        print detail
-    return fstab
-
 def write_mount_point(drive, mount_point):
     new_line = ""
     # Create directory if it doesn't exist
@@ -78,27 +51,72 @@ def write_mount_point(drive, mount_point):
     except Exception, details:
         print details
 
-def _get_mount_point(drive_path):
-    try:
-        return fstab[drive_path]
-    except Exception, details: # If it is not found in fstab
-        return ""
+def read_fstab():
+    '''Returns a dict like this:
+    '/dev/sda1': {'fs_file': '/',
+                'fs_freq': '0',
+                'fs_mntops': 'errors=remount-ro',
+                'fs_passno': '1',
+                'fs_spec': 'f8b392f2-4b9e-4a12-aa40-3b40817e99f3',
+                'fs_vfstype': 'ext4'}
+    '/dev/sda3': {'fs_file': '/home',
+                'fs_freq': '0',
+                'fs_mntops': 'defaults',
+                'fs_passno': '2',
+                'fs_spec': 'dd682fd8-81e0-4ab0-8bc6-54164af8171d',
+                'fs_vfstype': 'ext4'}'''
+    devices = get_devices()
+    with open('/etc/fstab') as lines:
+        for line in lines:
+            if not line.startswith('#'):
+                if line.startswith('UUID'):
+                    fs_spec = line.split()[0].split('=')[1]
+                    device = subprocess.check_output(['blkid', '-U', fs_spec]).strip()
+                elif line.startswith('LABEL'):
+                    label = line.split()[0].split('=')[1]
+                    device = subprocess.check_output(['blkid', '-L', label]).strip()
+                    fs_spec = devices[device]['UUID']
+                elif line.startswith('/dev/'):
+                    device = line.split()[0]
+                    try:
+                        fs_spec = devices[device]['UUID']
+                    except KeyError:
+                        fs_spec = line.split()[0]    
+                else:
+                    device = line.split()[0]
+                    fs_spec = line.split()[0]
+                if device is not None:
+                    fs_file = line.split()[1]
+                    fs_vfstype = line.split()[2]
+                    fs_mntops = line.split()[3]
+                    fs_freq = line.split()[4]
+                    fs_passno = line.split()[5]
+                    fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno}
+    return fstab
 
-def _get_drive_paths():
-    paths = dircache.listdir("/dev")
-    needed_paths = []
-    for path in paths:
-        if re.match("sd\w\d", path):
-            needed_paths.append("%s%s" % ("/dev/", path))
-        if re.match("hd\w\d", path):
-            needed_paths.append("%s%s" % ("/dev/", path))
-    return needed_paths
+def get_devices():
+    '''Returns a dict like this:
+    '/dev/sda1': {'LABEL': '"root"',
+                'TYPE': '"ext4"',
+                'UUID': '"f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'},
+    '/dev/sda2': {'TYPE': '"swap"',
+                'UUID': '"a3cebf99-3cae-4aa4-8c95-832afd565677"'}'''
+    with open('/proc/partitions') as lines:
+        results = (
+            re.search(r'sd[a-z][0-9]+', line)
+            for line in lines
+        )
+        device_names = ([match.group(0) for match in results if match])
+    return dict(('/dev/{}'.format(device), _get_device(device)) for device in device_names)
 
-def _get_UUID(device):
-    '''/dev/sda1 -> "f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'''
-
-    p = subprocess.check_output(['blkid', device])
-    return p.split()[2].split('=')[1]
+def _get_device(device):
+    device = os.path.join('/dev/', device)
+    # p = subprocess.check_output(['blkid', device])
+    p = subprocess.check_output(['lsblk',
+                                '-Po',
+                                'UUID,LABEL,SIZE,TYPE,FSTYPE', device])
+    output = p.split()
+    return dict(e.split('=') for e in output)
 
 
 ##################################################
