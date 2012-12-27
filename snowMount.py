@@ -11,7 +11,6 @@ from gi.repository import Gtk, Gio
 
 VERSION = "1.0.1"
 DEBUG = False
-fstab = {}
 FSTAB_PATH = '/etc/fstab'
 
 ##################################################
@@ -51,6 +50,8 @@ def write_mount_point(drive, mount_point):
     except Exception, details:
         print details
 
+
+
 def read_fstab():
     '''Returns a dict like this:
     '/dev/sda1': {'fs_file': '/',
@@ -66,33 +67,37 @@ def read_fstab():
                 'fs_spec': 'dd682fd8-81e0-4ab0-8bc6-54164af8171d',
                 'fs_vfstype': 'ext4'}'''
     devices = get_devices()
-    with open('/etc/fstab') as lines:
-        for line in lines:
-            if not line.startswith('#'):
-                if line.startswith('UUID'):
-                    fs_spec = line.split()[0].split('=')[1]
-                    device = subprocess.check_output(['blkid', '-U', fs_spec]).strip()
-                elif line.startswith('LABEL'):
-                    label = line.split()[0].split('=')[1]
-                    device = subprocess.check_output(['blkid', '-L', label]).strip()
-                    fs_spec = devices[device]['UUID']
-                elif line.startswith('/dev/'):
-                    device = line.split()[0]
-                    try:
+    fstab = {}
+    try:
+        with open(FSTAB_PATH) as lines:
+            for line in lines:
+                if not line.startswith('#'):
+                    if line.startswith('UUID'):
+                        fs_spec = line.split()[0].split('=')[1]
+                        device = subprocess.check_output(['blkid', '-U', fs_spec]).strip()
+                    elif line.startswith('LABEL'):
+                        label = line.split()[0].split('=')[1]
+                        device = subprocess.check_output(['blkid', '-L', label]).strip()
                         fs_spec = devices[device]['UUID']
-                    except KeyError:
-                        fs_spec = line.split()[0]    
-                else:
-                    device = line.split()[0]
-                    fs_spec = line.split()[0]
-                if device is not None:
-                    fs_file = line.split()[1]
-                    fs_vfstype = line.split()[2]
-                    fs_mntops = line.split()[3]
-                    fs_freq = line.split()[4]
-                    fs_passno = line.split()[5]
-                    fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno}
-    return fstab
+                    elif line.startswith('/dev/'):
+                        device = line.split()[0]
+                        try:
+                            fs_spec = devices[device]['UUID']
+                        except KeyError:
+                            fs_spec = line.split()[0]    
+                    else:
+                        device = line.split()[0]
+                        fs_spec = line.split()[0]
+                    if device is not None:
+                        fs_file = line.split()[1]
+                        fs_vfstype = line.split()[2]
+                        fs_mntops = line.split()[3]
+                        fs_freq = line.split()[4]
+                        fs_passno = line.split()[5]
+                        fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno}
+        return fstab
+    except IOError, detail:
+        return detail
 
 def get_devices():
     '''Returns a dict like this:
@@ -101,22 +106,27 @@ def get_devices():
                 'UUID': '"f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'},
     '/dev/sda2': {'TYPE': '"swap"',
                 'UUID': '"a3cebf99-3cae-4aa4-8c95-832afd565677"'}'''
-    with open('/proc/partitions') as lines:
-        results = (
-            re.search(r'sd[a-z][0-9]+', line)
-            for line in lines
-        )
-        device_names = ([match.group(0) for match in results if match])
-    return dict(('/dev/{}'.format(device), _get_device(device)) for device in device_names)
+    try:
+        with open('/proc/partitions') as lines:
+            results = (
+                re.search(r'sd[a-z][0-9]+', line)
+                for line in lines
+            )
+            device_names = ([match.group(0) for match in results if match])
+        return dict(('/dev/{}'.format(device), _get_device(device)) for device in device_names)
+    except IOError, detail:
+        return detail
 
 def _get_device(device):
     device = os.path.join('/dev/', device)
-    # p = subprocess.check_output(['blkid', device])
-    p = subprocess.check_output(['lsblk',
-                                '-Po',
-                                'UUID,LABEL,SIZE,TYPE,FSTYPE', device])
-    output = p.split()
-    return dict(e.split('=') for e in output)
+    try:
+        p = subprocess.check_output(['lsblk',
+                                    '-Po',
+                                    'UUID,LABEL,SIZE,TYPE,FSTYPE', device])
+        output = p.split()
+        return dict(e.split('=') for e in output)
+    except Exception, detail:
+        return detail
 
 
 ##################################################
