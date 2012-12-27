@@ -17,40 +17,27 @@ FSTAB_PATH = '/etc/fstab'
 #                  Drive Reader                  #
 ##################################################
 
-def write_mount_point(drive, mount_point):
-    new_line = ""
-    # Create directory if it doesn't exist
-    if not os.path.exists(mount_point) and mount_point:
-        try:
-            os.makedirs(mount_point)
-            print "Creating directory " + mount_point
-        except Exception, detail:
-            print "Mount point " + mount_point + " does not exist and cannot be created: " + detail
-            return
-
-    if mount_point:
-        new_line = "UUID=" + _get_UUID(drive) + " " + mount_point + " auto defaults 0 0\n"
-        print "Writing line to " + FSTAB_PATH + ":\n" + new_line
+def write_fstab(fstab):
+    file_header = '''# /etc/fstab - generated with snowMount
+#
+# Use 'blkid' to print the universally unique identifier for a
+# device; this may be used with UUID= as a more robust way to name devices
+# that works even if disks are added and removed. See fstab(5).
+#
+# <file system>\t<mount point>\t<type>\t<options>\t<dump>\t<pass>'''
+    lines = []
+    for key in fstab:
+        if fstab[key]['use_uuid']:
+            new_line = 'UUID={}\t{}\t{}\t{}\t{}\t{}\n'.format(fstab[key]['fs_spec'], fstab[key]['fs_file'], fstab[key]['fs_vfstype'], fstab[key]['fs_mntops'], fstab[key]['fs_freq'], fstab[key]['fs_passno'])
+        else:
+            new_line = '{}\t{}\t{}\t{}\t{}\t{}\n'.format(fstab[key]['fs_spec'], fstab[key]['fs_file'], fstab[key]['fs_vfstype'], fstab[key]['fs_mntops'], fstab[key]['fs_freq'], fstab[key]['fs_passno'])
+        lines.append(new_line)
+    output = '{}\n{}'.format(file_header, ''.join(lines))
     try:
-        written = False
-        f = io.open(FSTAB_PATH, 'r')
-        lines = f.readlines()
-        f.close()
-
-        for line in lines:
-            if line.find(drive) == 0:
-                lines.remove(line)
-        lines.append(unicode(new_line))
-
-        f = io.open(FSTAB_PATH, 'w')
-
-        f.writelines(lines)
-        f.flush()
-        f.close()
-    except Exception, details:
-        print details
-
-
+        with open(FSTAB_PATH, 'w') as file:
+            file.write(output)
+    except IOError, detail:
+        return detail
 
 def read_fstab():
     '''Returns a dict like this:
@@ -75,26 +62,31 @@ def read_fstab():
                     if line.startswith('UUID'):
                         fs_spec = line.split()[0].split('=')[1]
                         device = subprocess.check_output(['blkid', '-U', fs_spec]).strip()
+                        use_uuid = True
                     elif line.startswith('LABEL'):
                         label = line.split()[0].split('=')[1]
                         device = subprocess.check_output(['blkid', '-L', label]).strip()
                         fs_spec = devices[device]['UUID']
+                        use_uuid = True
                     elif line.startswith('/dev/'):
                         device = line.split()[0]
                         try:
                             fs_spec = devices[device]['UUID']
+                            use_uuid = True
                         except KeyError:
-                            fs_spec = line.split()[0]    
+                            fs_spec = line.split()[0]
+                            use_uuid = False
                     else:
                         device = line.split()[0]
                         fs_spec = line.split()[0]
-                    if device is not None:
-                        fs_file = line.split()[1]
-                        fs_vfstype = line.split()[2]
-                        fs_mntops = line.split()[3]
-                        fs_freq = line.split()[4]
-                        fs_passno = line.split()[5]
-                        fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno}
+                        use_uuid = False
+
+                    fs_file = line.split()[1]
+                    fs_vfstype = line.split()[2]
+                    fs_mntops = line.split()[3]
+                    fs_freq = line.split()[4]
+                    fs_passno = line.split()[5]
+                    fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno, 'use_uuid' : use_uuid}
         return fstab
     except IOError, detail:
         return detail
