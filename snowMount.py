@@ -105,12 +105,11 @@ def get_devices():
                 for line in lines
             )
             device_names = ([match.group(0) for match in results if match])
-        return dict(('/dev/{}'.format(device), _get_device(device)) for device in device_names)
+        return dict(('/dev/{}'.format(device), _get_device(os.path.join('/dev/', device))) for device in device_names)
     except IOError, detail:
         return detail
 
 def _get_device(device):
-    device = os.path.join('/dev/', device)
     try:
         p = subprocess.check_output(['lsblk',
                                     '-Po',
@@ -120,60 +119,137 @@ def _get_device(device):
     except Exception, detail:
         return detail
 
+def get_mountpoint(device, fstab):
+    if device in fstab:
+        return fstab[device]['fs_file']
+    else:
+        return ''
+
+def update_fstab(device, mountpoint, fstab):
+    if device in fstab:
+        fstab[device]['fs_file'] = mountpoint
+    else:
+        devinfo = _get_device(device)
+        try:
+            fs_spec = devinfo['UUID'].strip('"')
+            use_uuid = True
+        except KeyError:
+            fs_spec = device
+            use_uuid = False
+        fs_file = mountpoint
+        fs_vfstype = devinfo['FSTYPE'].strip('"')
+        fs_mntops = 'defaults'
+        fs_freq = '0'
+        fs_passno = '0'
+        fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno, 'use_uuid' : use_uuid}
+    return fstab
+
+def get_fstype(device, fstab):
+    if device in fstab:
+        return fstab[device]['fs_vfstype']
+    else:
+        return _get_device(device)['FSTYPE'].strip('"')
+
+def get_size(device, devices):
+    return devices[device]['SIZE'].strip('"')
+
+
 
 ##################################################
 #                  Main Window                   #
 ##################################################
 
-class MainWindow:
+class MainWindow(Gtk.Window):
 
-    def __init__(self):
-        self.builder = Gtk.Builder()
-        self.builder.add_from_file("snowMount.ui")
+    def __init__(self, devices, fstab):
+        self.devices = devices
+        self.fstab = fstab
 
-        self.window = self.builder.get_object("window_main")
-        self.button_cancel = self.builder.get_object("button_cancel")
-        self.button_ok = self.builder.get_object("button_ok")
-        self.list_store_drives = self.builder.get_object("list_store_drives")
-        self.cell_renderer_mount_point = self.builder.get_object("cell_renderer_mount_point")
+        Gtk.Window.__init__(self, title='SnowMount')
 
-        read_fstab()
-        self.drive_list = get_drive_list()
-        self.drive_list_orig = []
-        for item in self.drive_list:
-            self.drive_list_orig.append(item[:])
-        for drive in self.drive_list:
-            titer = self.list_store_drives.append(drive)
+        self.main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.add(self.main_vbox)
 
-        self.button_cancel.connect("button-release-event", Gtk.main_quit)
-        self.button_ok.connect("button-release-event", self.on_button_ok_released)
-        self.cell_renderer_mount_point.connect("edited", self.on_mount_point_edited)
-        self.window.connect("destroy", Gtk.main_quit)
-        self.window.show_all()
+        self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.main_vbox.pack_start(self.main_hbox, True, True, 0)
 
-    def on_button_ok_released(self, widget, event):
-        for i in range(len(self.drive_list)):
-            if self.drive_list[i][2] != self.drive_list_orig[i][2]:
-                write_mount_point(self.drive_list[i][0], self.drive_list[i][2])
-        Gtk.main_quit()
+        self.device_store = Gtk.ListStore(str)
+        for device in self.devices:
+            self.device_store.append([device])
+        self.device_view = Gtk.TreeView(self.device_store)
+        self.device_store_selection = self.device_view.get_selection()
+        self.device_store_selection.connect('changed', self.on_cursor_changed)
+        renderer = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn("Devices", renderer, text=0)
+        self.device_view.append_column(column)
+        self.main_hbox.pack_start(self.device_view, False, False, 0)
 
-    def on_mount_point_edited(self, renderer, path, new_text):
-        self.drive_list[int(path)][2] = new_text
+        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.main_hbox.pack_start(self.vbox, True, True, 0)
 
-        titer = self.list_store_drives.get_iter(path)
-        self.list_store_drives.set_value(titer, 2, new_text)
+        self.frame = Gtk.Frame(label='sdXY')
+        self.vbox.pack_start(self.frame, True, True, 0)
+
+        self.grid = Gtk.Grid()
+        self.frame.add(self.grid)
+        
+        self.label_size = Gtk.Label('Size: ')
+        self.entry_size = Gtk.Entry()
+        self.entry_size.set_editable(False)
+        self.label_fstype = Gtk.Label('Filesystem: ')
+        self.entry_fstype = Gtk.Entry()
+        self.entry_fstype.set_editable(False)
+        self.label_mountpoint = Gtk.Label('Mountpoint: ')
+        self.entry_mountpoint = Gtk.Entry()
+        self.entry_mountpoint.set_editable(True)
+
+        self.grid.attach(self.label_size, 0, 0, 1, 1)
+        self.grid.attach(self.entry_size, 1, 0, 1, 1)
+        self.grid.attach(self.label_fstype, 0, 1, 1, 1)
+        self.grid.attach(self.entry_fstype, 1, 1, 1, 1)
+        self.grid.attach(self.label_mountpoint, 0, 2, 1, 1)
+        self.grid.attach(self.entry_mountpoint, 1, 2, 1, 1)
+
+        self.buttonbox = Gtk.ButtonBox()
+        self.button_apply = Gtk.Button('Apply', Gtk.STOCK_APPLY)
+        self.button_apply.connect('clicked', self.on_button_apply_clicked)
+        self.buttonbox.add(self.button_apply)
+
+        self.vbox.pack_start(self.buttonbox, True, True, 0)
+
+    def on_cursor_changed(self, selection):
+        model, treeiter = selection.get_selected()
+        if treeiter is not None:
+            device = model[treeiter][0]
+            self.frame.set_label(device.replace('/dev/', ''))
+            self.entry_size.set_text(get_size(device, self.devices))
+            self.entry_fstype.set_text(get_fstype(device, self.fstab))
+            self.entry_mountpoint.set_text(get_mountpoint(device, self.fstab))
+            self.current_device = device
+
+    def on_button_apply_clicked(self, widget):
+        mountpoint = self.entry_mountpoint.get_text()
+        self.fstab = update_fstab(self.current_device, mountpoint, self.fstab)
+        write_fstab(self.fstab)
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        if "--dry-run" in sys.argv:
-            DEBUG = "--dry-run" in sys.argv
-            FSTAB_PATH = '/tmp/fstab'
-        if "--version" in sys.argv or "-v" in sys.argv:
-            print "SnowMount version " + VERSION
-            sys.exit(1)
-    if os.getuid() != 0 and not DEBUG:
+    if os.getuid() != 0:
         print "Please run SnowMount as root."
         sys.exit(1)
 
-    MainWindow()
+    if len(sys.argv) > 1:
+        if "--version" in sys.argv or "-v" in sys.argv:
+            print "SnowMount version " + VERSION
+            sys.exit()
+        if "--dry-run" in sys.argv:
+            DEBUG = True
+            FSTAB_PATH = '/tmp/fstab'
+            if not os.path.exists(FSTAB_PATH):
+                os.system('cp /etc/fstab /tmp/')
+    fstab = read_fstab()
+    devices = get_devices()
+
+    win = MainWindow(devices, fstab)
+    win.connect("delete-event", Gtk.main_quit)
+    win.show_all()
     Gtk.main()
