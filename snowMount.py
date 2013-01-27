@@ -58,7 +58,7 @@ def read_fstab():
     try:
         with open(FSTAB_PATH) as lines:
             for line in lines:
-                if not line.startswith('#'):
+                if not line.startswith('#') and line.strip():
                     if line.startswith('UUID'):
                         fs_spec = line.split()[0].split('=')[1]
                         device = subprocess.check_output(['blkid', '-U', fs_spec]).strip()
@@ -125,9 +125,19 @@ def get_mountpoint(device, fstab):
     else:
         return ''
 
-def update_fstab(device, mountpoint, fstab):
+def update_fstab(device, mountpoint, mountoptions, fstab):
+    if mountpoint == '':
+        raise Exception('Invalid mountpount.')
+
+    if not os.path.exists(mountpoint):
+        os.mkdir(mountpoint)
+
     if device in fstab:
         fstab[device]['fs_file'] = mountpoint
+        if mountoptions != '':
+            fstab[device]['fs_mntops'] = mountoptions
+        else:
+            fstab[device]['fs_mntops'] = 'defaults'
     else:
         devinfo = _get_device(device)
         try:
@@ -153,7 +163,11 @@ def get_fstype(device, fstab):
 def get_size(device, devices):
     return devices[device]['SIZE'].strip('"')
 
-
+def get_mountoptions(device, fstab):
+    if device in fstab:
+        return fstab[device]['fs_mntops']
+    else:
+        return 'defaults'
 
 ##################################################
 #                  Main Window                   #
@@ -171,7 +185,7 @@ class MainWindow(Gtk.Window):
         self.add(self.main_vbox)
 
         self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.main_vbox.pack_start(self.main_hbox, True, True, 0)
+        self.main_vbox.pack_start(self.main_hbox, True, True, 6)
 
         self.device_store = Gtk.ListStore(str)
         for device in self.devices:
@@ -182,7 +196,7 @@ class MainWindow(Gtk.Window):
         renderer = Gtk.CellRendererText()
         column = Gtk.TreeViewColumn("Devices", renderer, text=0)
         self.device_view.append_column(column)
-        self.main_hbox.pack_start(self.device_view, False, False, 0)
+        self.main_hbox.pack_start(self.device_view, True, True, 6)
 
         self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main_hbox.pack_start(self.vbox, True, True, 0)
@@ -190,7 +204,7 @@ class MainWindow(Gtk.Window):
         self.frame = Gtk.Frame(label='sdXY')
         self.vbox.pack_start(self.frame, True, True, 0)
 
-        self.grid = Gtk.Grid()
+        self.grid = Gtk.Grid(column_spacing=5, row_spacing=5)
         self.frame.add(self.grid)
         
         self.label_size = Gtk.Label('Size: ')
@@ -202,6 +216,9 @@ class MainWindow(Gtk.Window):
         self.label_mountpoint = Gtk.Label('Mountpoint: ')
         self.entry_mountpoint = Gtk.Entry()
         self.entry_mountpoint.set_editable(True)
+        self.label_mountoptions = Gtk.Label('Options: ')
+        self.entry_mountoptions = Gtk.Entry()
+        self.entry_mountoptions.set_editable(True)
 
         self.grid.attach(self.label_size, 0, 0, 1, 1)
         self.grid.attach(self.entry_size, 1, 0, 1, 1)
@@ -209,6 +226,8 @@ class MainWindow(Gtk.Window):
         self.grid.attach(self.entry_fstype, 1, 1, 1, 1)
         self.grid.attach(self.label_mountpoint, 0, 2, 1, 1)
         self.grid.attach(self.entry_mountpoint, 1, 2, 1, 1)
+        self.grid.attach(self.label_mountoptions, 0, 3, 1, 1)
+        self.grid.attach(self.entry_mountoptions, 1, 3, 1, 1)
 
         self.buttonbox = Gtk.ButtonBox()
         self.button_apply = Gtk.Button('Apply', Gtk.STOCK_APPLY)
@@ -225,12 +244,22 @@ class MainWindow(Gtk.Window):
             self.entry_size.set_text(get_size(device, self.devices))
             self.entry_fstype.set_text(get_fstype(device, self.fstab))
             self.entry_mountpoint.set_text(get_mountpoint(device, self.fstab))
+            self.entry_mountoptions.set_text(get_mountoptions(device, self.fstab))
             self.current_device = device
 
     def on_button_apply_clicked(self, widget):
-        mountpoint = self.entry_mountpoint.get_text()
-        self.fstab = update_fstab(self.current_device, mountpoint, self.fstab)
-        write_fstab(self.fstab)
+        try:
+            mountpoint = self.entry_mountpoint.get_text()
+            mountoptions = self.entry_mountoptions.get_text()
+            self.fstab = update_fstab(self.current_device, mountpoint, mountoptions, self.fstab)
+            write_fstab(self.fstab)
+        except Exception, detail:
+            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,
+                Gtk.ButtonsType.OK, "Error!")
+            dialog.format_secondary_text(detail)
+            dialog.run()
+            dialog.destroy()
+
 
 if __name__ == "__main__":
     if os.getuid() != 0:
@@ -250,6 +279,7 @@ if __name__ == "__main__":
     devices = get_devices()
 
     win = MainWindow(devices, fstab)
+    win.set_size_request(450, 250)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
