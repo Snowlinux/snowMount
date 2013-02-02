@@ -184,8 +184,32 @@ class MainWindow(Gtk.Window):
         self.main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(self.main_vbox)
 
+        self.UI_INFO = """
+        <ui>
+          <menubar name='MenuBar'>
+            <menu action='FileMenu'>
+              <menuitem action='FileQuit' />
+            </menu>
+            <menu action='HelpMenu'>
+              <menuitem action='About' />
+            </menu>
+          </menubar>
+        </ui>
+        """
+
+        action_group = Gtk.ActionGroup('my_actions')
+        self.add_file_menu_actions(action_group)
+        self.add_help_menu_actions(action_group)
+
+        uimanager = self.create_ui_manager()
+        uimanager.insert_action_group(action_group)
+
+        menubar = uimanager.get_widget('/MenuBar')
+
+        self.main_vbox.pack_start(menubar, False, False, 0)
+
         self.main_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.main_vbox.pack_start(self.main_hbox, True, True, 6)
+        self.main_vbox.pack_start(self.main_hbox, True, True, 0)
 
         self.device_store = Gtk.ListStore(str)
         for device in self.devices:
@@ -196,13 +220,13 @@ class MainWindow(Gtk.Window):
         renderer = Gtk.CellRendererText()
         column = Gtk.TreeViewColumn("Devices", renderer, text=0)
         self.device_view.append_column(column)
-        self.main_hbox.pack_start(self.device_view, True, True, 6)
+        self.main_hbox.pack_start(self.device_view, True, True, 0)
 
         self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.main_hbox.pack_start(self.vbox, True, True, 0)
 
         self.frame = Gtk.Frame(label='sdXY')
-        self.vbox.pack_start(self.frame, True, True, 0)
+        self.vbox.pack_start(self.frame, True, True, 6)
 
         self.grid = Gtk.Grid(column_spacing=5, row_spacing=5)
         self.frame.add(self.grid)
@@ -260,6 +284,42 @@ class MainWindow(Gtk.Window):
             dialog.run()
             dialog.destroy()
 
+    def add_file_menu_actions(self, action_group):
+        action_filemenu = Gtk.Action("FileMenu", "File", None, None)
+        action_group.add_action(action_filemenu)
+        action_filequit = Gtk.Action("FileQuit", None, None, Gtk.STOCK_QUIT)
+        action_filequit.connect("activate", self.on_menu_file_quit)
+        action_group.add_action(action_filequit)
+
+    def add_help_menu_actions(self, action_group):
+        action_group.add_actions([("HelpMenu", None, "Help"), ("About", Gtk.STOCK_ABOUT, None, None, None, self.on_menu_help_about)])
+
+    def create_ui_manager(self):
+        uimanager = Gtk.UIManager()
+
+        # Throws exception if something went wrong
+        uimanager.add_ui_from_string(self.UI_INFO)
+
+        # Add the accelerator group to the toplevel window
+        accelgroup = uimanager.get_accel_group()
+        self.add_accel_group(accelgroup)
+        return uimanager
+
+    def on_menu_file_quit(self, widget):
+        Gtk.main_quit()
+
+    def on_menu_help_about(self, widget):
+        print "Menu item " + widget.get_name() + " was selected"
+        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, 'SnowMount x.y.z')
+        dialog.format_secondary_text('About SnowMount')
+        dialog.run()
+        dialog.destroy()
+
+    def on_button_press_event(self, widget, event):
+        # Check if right mouse button was preseed
+        if event.type == Gdk.EventType.BUTTON_PRESS and event.button == 3:
+            self.popup.popup(None, None, None, None, event.button, event.time)
+            return True # event has been handled
 
 if __name__ == "__main__":
     if os.getuid() != 0:
