@@ -6,10 +6,10 @@ import os
 import re
 import sys
 import subprocess
+import commands
 
 from gi.repository import Gtk, Gio
 
-VERSION = "1.0.1"
 DEBUG = False
 FSTAB_PATH = '/etc/fstab'
 
@@ -309,23 +309,8 @@ class MainWindow(Gtk.Window):
         Gtk.main_quit()
 
     def on_menu_help_about(self, widget):
-        print "Menu item " + widget.get_name() + " was selected"
         dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, 'SnowMount x.y.z')
-        dialog.format_secondary_text('''<Info Text about SnowMount>
-
-Copyright (C) 2012,2013  Andy Jacobsen <atze@libra.uberspace.de>
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.''')
+        dialog.format_secondary_text('<Info Text about SnowMount {}>\n\n{}'.format(VERSION, COPYRIGHT))
         dialog.run()
         dialog.destroy()
 
@@ -339,6 +324,21 @@ if __name__ == "__main__":
     if os.getuid() != 0:
         print "Please run SnowMount as root."
         sys.exit(1)
+
+    VERSION = commands.getoutput("/usr/lib/snowlinux/common/version.py snowmount")
+    COPYRIGHT = '''Copyright (C) 2012,2013  Andy Jacobsen <atze@libra.uberspace.de>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.'''
 
     if len(sys.argv) > 1:
         if "--version" in sys.argv or "-v" in sys.argv:
