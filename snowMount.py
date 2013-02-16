@@ -127,10 +127,17 @@ def get_mountpoint(device, fstab):
 
 def update_fstab(device, mountpoint, mountoptions, fstab):
     if mountpoint == '':
-        raise Exception('Invalid mountpount.')
+        try:
+            del fstab[device]
+        except KeyError:
+            return fstab
 
-    if not os.path.exists(mountpoint):
-        os.mkdir(mountpoint)
+    if mountpoint != 'none' and not mountpoint.startswith('/'):
+        raise Exception('Invalid mountpoint {}'.format(mountpoint))
+
+    if mountpoint != 'none' and mountpoint.startswith('/'):
+        if not os.path.exists(mountpoint):
+            os.mkdir(mountpoint)
 
     if device in fstab:
         fstab[device]['fs_file'] = mountpoint
@@ -275,8 +282,12 @@ class MainWindow(Gtk.Window):
         try:
             mountpoint = self.entry_mountpoint.get_text()
             mountoptions = self.entry_mountoptions.get_text()
-            self.fstab = update_fstab(self.current_device, mountpoint, mountoptions, self.fstab)
-            write_fstab(self.fstab)
+            new_fstab = update_fstab(self.current_device, mountpoint, mountoptions, self.fstab)
+            if new_fstab is not None:
+                print 'Not None'
+                self.fstab.update(new_fstab)
+                write_fstab(self.fstab)
+
         except Exception, detail:
             dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,
                 Gtk.ButtonsType.OK, "Error!")
