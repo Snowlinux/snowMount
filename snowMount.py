@@ -320,8 +320,12 @@ class MainWindow(Gtk.Window):
         Gtk.main_quit()
 
     def on_menu_help_about(self, widget):
-        dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.INFO, Gtk.ButtonsType.OK, 'SnowMount x.y.z')
-        dialog.format_secondary_text('<Info Text about SnowMount {}>\n\n{}'.format(VERSION, COPYRIGHT))
+        dialog = Gtk.AboutDialog()
+        dialog.set_program_name('SnowMount')
+        dialog.set_version(VERSION)
+        dialog.set_license(LICENSE)
+        dialog.set_copyright(COPYRIGHT)
+        dialog.set_comments('A tool to manage mountpoints and options of devices.')
         dialog.run()
         dialog.destroy()
 
@@ -337,9 +341,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     VERSION = commands.getoutput("/usr/lib/snowlinux/common/version.py snowmount")
-    COPYRIGHT = '''Copyright (C) 2012,2013  Andy Jacobsen <atze@libra.uberspace.de>
-
-This program is free software: you can redistribute it and/or modify
+    COPYRIGHT = 'Copyright (C) 2012,2013  Andy Jacobsen <atze@libra.uberspace.de>'
+    LICENSE = '''This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
 (at your option) any later version.
