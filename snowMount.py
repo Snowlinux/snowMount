@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import dircache
-import io
 import os
 import re
 import sys
@@ -284,7 +282,6 @@ class MainWindow(Gtk.Window):
             mountoptions = self.entry_mountoptions.get_text()
             new_fstab = update_fstab(self.current_device, mountpoint, mountoptions, self.fstab)
             if new_fstab is not None:
-                print 'Not None'
                 self.fstab.update(new_fstab)
                 write_fstab(self.fstab)
 
