@@ -193,6 +193,7 @@ class MainWindow(Gtk.Window):
         <ui>
           <menubar name='MenuBar'>
             <menu action='FileMenu'>
+              <menuitem action='FileSave' />
               <menuitem action='FileQuit' />
             </menu>
             <menu action='HelpMenu'>
@@ -293,11 +294,14 @@ class MainWindow(Gtk.Window):
             dialog.destroy()
 
     def add_file_menu_actions(self, action_group):
-        action_filemenu = Gtk.Action("FileMenu", "File", None, None)
+        action_filemenu = Gtk.Action("FileMenu", "File", "Save", None)
         action_group.add_action(action_filemenu)
         action_filequit = Gtk.Action("FileQuit", None, None, Gtk.STOCK_QUIT)
         action_filequit.connect("activate", self.on_menu_file_quit)
         action_group.add_action(action_filequit)
+        action_filesave = Gtk.Action("FileSave", None, None, Gtk.STOCK_SAVE)
+        action_filesave.connect("activate", self.on_menu_file_save)
+        action_group.add_action(action_filesave)
 
     def add_help_menu_actions(self, action_group):
         action_group.add_actions([("HelpMenu", None, "Help"), ("About", Gtk.STOCK_ABOUT, None, None, None, self.on_menu_help_about)])
@@ -312,6 +316,9 @@ class MainWindow(Gtk.Window):
         accelgroup = uimanager.get_accel_group()
         self.add_accel_group(accelgroup)
         return uimanager
+
+    def on_menu_file_save(self, widget):
+	Gtk.STOCK_SAVE()
 
     def on_menu_file_quit(self, widget):
         Gtk.main_quit()
