@@ -259,9 +259,9 @@ class MainWindow(Gtk.Window):
         self.grid.attach(self.entry_mountoptions, 1, 3, 1, 1)
 
         self.buttonbox = Gtk.ButtonBox()
-        self.button_apply = Gtk.Button('Apply', Gtk.STOCK_APPLY)
-        self.button_apply.connect('clicked', self.on_button_apply_clicked)
-        self.buttonbox.add(self.button_apply)
+        self.button_save = Gtk.Button('Save', Gtk.STOCK_SAVE)
+        self.button_save.connect('clicked', self.on_button_save_clicked)
+        self.buttonbox.add(self.button_save)
 
         self.vbox.pack_start(self.buttonbox, True, True, 0)
 
@@ -276,7 +276,7 @@ class MainWindow(Gtk.Window):
             self.entry_mountoptions.set_text(get_mountoptions(device, self.fstab))
             self.current_device = device
 
-    def on_button_apply_clicked(self, widget):
+    def on_button_save_clicked(self, widget):
         try:
             mountpoint = self.entry_mountpoint.get_text()
             mountoptions = self.entry_mountoptions.get_text()
