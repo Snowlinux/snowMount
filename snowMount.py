@@ -193,6 +193,8 @@ class MainWindow(Gtk.Window):
         <ui>
           <menubar name='MenuBar'>
             <menu action='FileMenu'>
+              <menuitem action='FileSave' />
+              <separator />
               <menuitem action='FileQuit' />
             </menu>
             <menu action='HelpMenu'>
@@ -295,6 +297,9 @@ class MainWindow(Gtk.Window):
     def add_file_menu_actions(self, action_group):
         action_filemenu = Gtk.Action("FileMenu", "File", None, None)
         action_group.add_action(action_filemenu)
+        action_filesave = Gtk.Action("FileSave", None, None, Gtk.STOCK_SAVE)
+        action_filesave.connect("activate", self.on_button_save_clicked)
+        action_group.add_action(action_filesave)
         action_filequit = Gtk.Action("FileQuit", None, None, Gtk.STOCK_QUIT)
         action_filequit.connect("activate", self.on_menu_file_quit)
         action_group.add_action(action_filequit)
