@@ -12,7 +12,7 @@ DEBUG = False
 FSTAB_PATH = '/etc/fstab'
 
 ##################################################
-#                  Drive Reader                  #
+# Drive Reader #
 ##################################################
 
 def write_fstab(fstab):
@@ -39,18 +39,18 @@ def write_fstab(fstab):
 
 def read_fstab():
     '''Returns a dict like this:
-    '/dev/sda1': {'fs_file': '/',
-                'fs_freq': '0',
-                'fs_mntops': 'errors=remount-ro',
-                'fs_passno': '1',
-                'fs_spec': 'f8b392f2-4b9e-4a12-aa40-3b40817e99f3',
-                'fs_vfstype': 'ext4'}
-    '/dev/sda3': {'fs_file': '/home',
-                'fs_freq': '0',
-                'fs_mntops': 'defaults',
-                'fs_passno': '2',
-                'fs_spec': 'dd682fd8-81e0-4ab0-8bc6-54164af8171d',
-                'fs_vfstype': 'ext4'}'''
+'/dev/sda1': {'fs_file': '/',
+'fs_freq': '0',
+'fs_mntops': 'errors=remount-ro',
+'fs_passno': '1',
+'fs_spec': 'f8b392f2-4b9e-4a12-aa40-3b40817e99f3',
+'fs_vfstype': 'ext4'}
+'/dev/sda3': {'fs_file': '/home',
+'fs_freq': '0',
+'fs_mntops': 'defaults',
+'fs_passno': '2',
+'fs_spec': 'dd682fd8-81e0-4ab0-8bc6-54164af8171d',
+'fs_vfstype': 'ext4'}'''
     devices = get_devices()
     fstab = {}
     try:
@@ -91,11 +91,11 @@ def read_fstab():
 
 def get_devices():
     '''Returns a dict like this:
-    '/dev/sda1': {'LABEL': '"root"',
-                'TYPE': '"ext4"',
-                'UUID': '"f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'},
-    '/dev/sda2': {'TYPE': '"swap"',
-                'UUID': '"a3cebf99-3cae-4aa4-8c95-832afd565677"'}'''
+'/dev/sda1': {'LABEL': '"root"',
+'TYPE': '"ext4"',
+'UUID': '"f8b392f2-4b9e-4a12-aa40-3b40817e99f3"'},
+'/dev/sda2': {'TYPE': '"swap"',
+'UUID': '"a3cebf99-3cae-4aa4-8c95-832afd565677"'}'''
     try:
         with open('/proc/partitions') as lines:
             results = (
@@ -175,7 +175,7 @@ def get_mountoptions(device, fstab):
         return 'defaults'
 
 ##################################################
-#                  Main Window                   #
+# Main Window #
 ##################################################
 
 class MainWindow(Gtk.Window):
@@ -190,18 +190,17 @@ class MainWindow(Gtk.Window):
         self.add(self.main_vbox)
 
         self.UI_INFO = """
-        <ui>
-          <menubar name='MenuBar'>
-            <menu action='FileMenu'>
-              <menuitem action='FileSave' />
-              <menuitem action='FileQuit' />
-            </menu>
-            <menu action='HelpMenu'>
-              <menuitem action='About' />
-            </menu>
-          </menubar>
-        </ui>
-        """
+<ui>
+<menubar name='MenuBar'>
+<menu action='FileMenu'>
+<menuitem action='FileQuit' />
+</menu>
+<menu action='HelpMenu'>
+<menuitem action='About' />
+</menu>
+</menubar>
+</ui>
+"""
 
         action_group = Gtk.ActionGroup('my_actions')
         self.add_file_menu_actions(action_group)
@@ -294,14 +293,11 @@ class MainWindow(Gtk.Window):
             dialog.destroy()
 
     def add_file_menu_actions(self, action_group):
-        action_filemenu = Gtk.Action("FileMenu", "File", "Save", None)
+        action_filemenu = Gtk.Action("FileMenu", "File", None, None)
         action_group.add_action(action_filemenu)
         action_filequit = Gtk.Action("FileQuit", None, None, Gtk.STOCK_QUIT)
         action_filequit.connect("activate", self.on_menu_file_quit)
         action_group.add_action(action_filequit)
-        action_filesave = Gtk.Action("FileSave", None, None, Gtk.STOCK_SAVE)
-        action_filesave.connect("activate", self.on_menu_file_save)
-        action_group.add_action(action_filesave)
 
     def add_help_menu_actions(self, action_group):
         action_group.add_actions([("HelpMenu", None, "Help"), ("About", Gtk.STOCK_ABOUT, None, None, None, self.on_menu_help_about)])
@@ -316,9 +312,6 @@ class MainWindow(Gtk.Window):
         accelgroup = uimanager.get_accel_group()
         self.add_accel_group(accelgroup)
         return uimanager
-
-    def on_menu_file_save(self, widget):
-	Gtk.STOCK_SAVE()
 
     def on_menu_file_quit(self, widget):
         Gtk.main_quit()
@@ -345,7 +338,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     VERSION = commands.getoutput("/usr/lib/snowlinux/common/version.py snowmount")
-    COPYRIGHT = 'Copyright (C) 2012,2013  Andy Jacobsen <andy@snowlinux.de>'
+    COPYRIGHT = 'Copyright (C) 2012,2013 Andy Jacobsen <andy@snowlinux.de>'
     LICENSE = '''This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
@@ -353,10 +346,10 @@ the Free Software Foundation, either version 2 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.'''
+along with this program. If not, see <http://www.gnu.org/licenses/>.'''
 
     if len(sys.argv) > 1:
         if "--version" in sys.argv or "-v" in sys.argv:
