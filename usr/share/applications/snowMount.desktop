@@ -1,0 +1,12 @@
+
+[Desktop Entry]
+Name=snowMount
+GenericName=snowMount
+Comment=Install the operating system to disk
+Exec=gksudo /usr/bin/snowmount
+Icon=/usr/bin/snowlinux/snowMount/icon.png
+Terminal=False
+Type=Application
+Categories=System;
+Name=snowMount
+Name[de_DE]=snowMount

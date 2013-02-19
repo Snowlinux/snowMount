@@ -1,0 +1,11 @@
+snowmount (2.0.0) flurry; urgency=low
+
+  * Improved snowMount
+
+ -- Lars Torben Kremer <lars@snowlinux.de>  Tue, 19 Feb 2013 18:28:54 +0100
+
+snowmount (1.0.0) white; urgency=low
+
+  * Initial release.
+
+ -- Lars Torben Kremer <lars@snowlinux.de>  Sun, 28 Oct 2012 16:55:52 +0100
