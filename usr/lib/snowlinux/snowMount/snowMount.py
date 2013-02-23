@@ -267,7 +267,14 @@ class MainWindow(Gtk.Window):
 
         self.vbox.pack_start(self.buttonbox, True, True, 0)
 
+        self.statusbar = Gtk.Statusbar()
+        self.context_id = self.statusbar.get_context_id('status')
+
+        self.main_vbox.pack_start(self.statusbar, False, False, 0)
+
+
     def on_cursor_changed(self, selection):
+        self.statusbar.pop(self.context_id)
         model, treeiter = selection.get_selected()
         if treeiter is not None:
             device = model[treeiter][0]
@@ -286,6 +293,7 @@ class MainWindow(Gtk.Window):
             if new_fstab is not None:
                 self.fstab.update(new_fstab)
                 write_fstab(self.fstab)
+                self.message_id = self.statusbar.push(self.context_id, 'Changes succesfully saved.')
 
         except Exception, detail:
             dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,
