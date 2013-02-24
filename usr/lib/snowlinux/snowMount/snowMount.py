@@ -155,7 +155,14 @@ def update_fstab(device, mountpoint, mountoptions, fstab):
         fs_vfstype = devinfo['FSTYPE'].strip('"')
         fs_mntops = 'defaults'
         fs_freq = '0'
-        fs_passno = '0'
+
+        ### TODO ###
+        if mountpoint == '/':
+            fs_passno = '1'
+        elif fs_vfstype in ['ext3', 'ext4']:
+            fs_passno = '2'
+        else:
+            fs_passno = '0'
         fstab[device] = {'fs_spec' : fs_spec, 'fs_file' : fs_file, 'fs_vfstype' : fs_vfstype, 'fs_mntops' : fs_mntops, 'fs_freq' : fs_freq, 'fs_passno' : fs_passno, 'use_uuid' : use_uuid}
     return fstab
 
@@ -173,6 +180,7 @@ def get_mountoptions(device, fstab):
         return fstab[device]['fs_mntops']
     else:
         return 'defaults'
+
 
 ##################################################
 #                  Main Window                   #
