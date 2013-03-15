@@ -2,7 +2,7 @@
 [Desktop Entry]
 Name=snowMount
 GenericName=snowMount
-Comment=Install the operating system to disk
+Comment=Snowlinux tool for mounting devices
 Exec=gksudo /usr/bin/snowmount
 Icon=/usr/lib/snowlinux/snowMount/icon.png
 Terminal=False
