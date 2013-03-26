@@ -3,9 +3,20 @@
 import parted
 import subprocess
 
+
 class DriveReader(object):
     def __init__(self):
-        self.disks = Disks()._getDisks()
+        self.disks = self._setDisks()
+
+    def _setDisks(self):
+        return Disks()._getDisks()
+
+    def getDisks(self):
+        self.disks = self._setDisks()
+        return self.disks.keys()
+
+    def getParts(self, device_path):
+        return self.disks[device_path]['parts'].keys()
 
     def getModel(self, device_path):
         if device_path[-1].isdigit():
@@ -15,9 +26,15 @@ class DriveReader(object):
 
     def getSize(self, device_path):
         if device_path[-1].isdigit():
-            return self.disks[device_path[:-1]]['parts'][device_path]['size']
+            size = self.disks[device_path[:-1]]['parts'][device_path]['size']
         else:
-            return self.disks[device_path]['size']
+            size = self.disks[device_path]['size']
+
+        for x in ['bytes','KB','MB','GB']:
+            if size < 1024.0:
+                return "%3.1f%s" % (size, x)
+            size /= 1024.0
+        return "%3.1f%s" % (size, 'TB')
 
     def getFilesystem(self, device_path):
         return self.disks[device_path[:-1]]['parts'][device_path]['filesystem']
