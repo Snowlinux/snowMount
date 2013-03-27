@@ -4,109 +4,114 @@ import parted
 import subprocess
 
 
-class DriveReader(object):
-    def __init__(self):
-        self.disks = self._setDisks()
+def _get_devices():
+    import re
+    with open('/proc/partitions') as lines:
+        results = (
+            re.search(r'sd[a-z]', line)
+            for line in lines
+        )
+        devices = (['/dev/{}'.format(match.group(0)) for match in results if match])
+    for device in set(devices):
+        yield Disk(parted.Device(device))
 
-    def _setDisks(self):
-        return Disks()._getDisks()
+def get_partition(device_path):
+    device = parted.Device(device_path[:-1])
+    disk = Disk(device)
+    return disk.getPartitions()[device_path]
 
-    def getDisks(self):
-        self.disks = self._setDisks()
-        return self.disks.keys()
+def get_disk(device_path):
+    device = parted.Device(device_path)
+    return Disk(device)
 
-    def getParts(self, device_path):
-        return self.disks[device_path]['parts'].keys()
+def get_disks():
+    disks = {}
+    for disk in _get_devices():
+        disks[disk._device_path] = disk
+    return disks
 
-    def getModel(self, device_path):
-        if device_path[-1].isdigit():
-            return self.disks[device_path[:-1]]['model']
-        else:
-            return self.disks[device_path]['model']
-
-    def getSize(self, device_path):
-        if device_path[-1].isdigit():
-            size = self.disks[device_path[:-1]]['parts'][device_path]['size']
-        else:
-            size = self.disks[device_path]['size']
-
-        for x in ['bytes','KB','MB','GB']:
-            if size < 1024.0:
-                return "%3.1f%s" % (size, x)
-            size /= 1024.0
-        return "%3.1f%s" % (size, 'TB')
-
-    def getFilesystem(self, device_path):
-        return self.disks[device_path[:-1]]['parts'][device_path]['filesystem']
-
-    def getUUID(self, device_path):
-        return self.disks[device_path[:-1]]['parts'][device_path]['uuid']
-
-    def getLabel(self, device_path):
-        return self.disks[device_path[:-1]]['parts'][device_path]['label']
-
-    def getDevice(self, label=None, uuid=None):
-        if label:
-            dev = subprocess.check_output('blkid -L {}'.format(label).strip(), shell=True)
-            return dev.strip()
-        elif uuid:
-            dev = subprocess.check_output('blkid -U {}'.format(uuid).strip(), shell=True)
-            return dev.strip()
-        else:
-            return None
-
-class Disks(object):
-    '''
-    '/dev/sda': {'model': 'ATA ST94813AS', 
-                'parts': {'/dev/sda1': {'filesystem': 'ext4', 'size': 14998831104.0},
-                          '/dev/sda2': {'filesystem': 'linux-swap(v1)', 'size': 1999634432.0},
-                          '/dev/sda3': {'filesystem': 'ext4', 'size': 23007854592.0}},
-                'size': 40007761920.0}}
-    '''
-    def __init__(self):
-        self._devices = parted.getAllDevices()
-        self._disks = {}
-        for disk in self._devices:
-            disk = Disk(disk)
-            self._disks[disk.device_path] = {'model': disk.model,
-                                            'size': disk.size,
-                                            'parts': disk.partitions}
-
-    def _getDisks(self):
-        return self._disks
+def get_device_path(uuid=None, label=None):
+    if label:
+        dev = subprocess.check_output('blkid -L {}'.format(label).strip(), shell=True)
+        return dev.strip()
+    elif uuid:
+        dev = subprocess.check_output('blkid -U {}'.format(uuid).strip(), shell=True)
+        return dev.strip()
+    else:
+        return None
 
 class Disk(object):
     def __init__(self, disk):
         self._disk = parted.Disk(disk)
-        self.device_path = self._disk.device.path
-        self.model = self._disk.device.model
-        self.size = self._disk.device.getLength(unit='B')
-        self.partitions = {}
+        self._device_path = self._disk.device.path
+        self._size = self._disk.device.getLength(unit='B')
+
+    def getModel(self):
+        return self._disk.device.model
+
+    def getSize(self):
+        for x in ['bytes','KB','MB','GB']:
+            if self._size < 1024.0:
+                return "%3.1f%s" % (self._size, x)
+            self._size /= 1024.0
+        return "%3.1f%s" % (self._size, 'TB')
+
+    def getPartitions(self):
+        partitions = {}
         for part in self._disk.partitions:
             part = Partition(part)
-            self.partitions[part.device_path] = {'size': part.size,
-                                                'filesystem': part.filesystem,
-                                                'uuid': part.uuid,
-                                                'label': part.label}
+            partitions[part._device_path] = part
+        return partitions
 
 class Partition(object):
     def __init__(self, partition):
         self._partition = partition
-        self.size = self._partition.getLength(unit='B')
-        self.device_name = self._partition.getDeviceNodeName()
-        self.device_path = self._partition.path
-        self.filesystem = self._partition.fileSystem.type
-        p = subprocess.check_output(['lsblk', '-Po', 'UUID', self.device_path])
-        self.uuid = p.split('=')[1].strip().strip('"')
-        p = subprocess.check_output(['lsblk', '-Po', 'LABEL', self.device_path])
-        self.label = p.split('=')[1].strip().strip('"')
+        self._size = self._partition.getLength(unit='B')
+        self._device_path = self._partition.path
 
+    def getFilesystem(self):
+        return self._partition.fileSystem.type
+
+    def getUUID(self):
+        p = subprocess.check_output(['lsblk', '-Po', 'UUID', self._device_path])
+        return p.split('=')[1].strip().strip('"')
+
+    def getLabel(self):
+        p = subprocess.check_output(['lsblk', '-Po', 'LABEL', self._device_path])
+        return p.split('=')[1].strip().strip('"')
+
+    def getSize(self):
+        for x in ['bytes','KB','MB','GB']:
+            if self._size < 1024.0:
+                return "%3.1f%s" % (self._size, x)
+            self._size /= 1024.0
+        return "%3.1f%s" % (self._size, 'TB')
+
+    def getMountpoint(self):
+        if self.isBusy():
+            p = subprocess.check_output(['lsblk', '-Po', 'MOUNTPOINT', self._device_path])
+            return p.split('=')[1].strip().strip('"')
+        else:
+            return None
+
+    def isBusy(self):
+        return self._partition.busy
 
 if __name__ == '__main__':
-    dr = DriveReader()
-    for disk in dr.disks:
-        print 'Disk: {}, Model: {} Size: {}'.format(disk, dr.getModel(disk), dr.getSize(disk))
-        # print 'Device\tLabel\tSize\tFilesystem\tUUID'
-        for part in dr.disks[disk]['parts']:
-            print '-{}\t{}\t{}\t{}\t{}'.format(part, dr.getLabel(part), dr.getSize(part), dr.getFilesystem(part), dr.getUUID(part).strip('"'))
-
+    # print get_device_path('f8b392f2-4b9e-4a12-aa40-3b40817e99f3')
+    part = get_partition('/dev/sdc1')
+    print part.getUUID()
+    disks = get_disks()
+    for disk in disks:
+        print 'Disk: {} ({})'.format(disks[disk].getModel(), disk)
+        print 'Size: {}'.format(disks[disk].getSize())
+        print 'Partitions:'
+        partitions = disks[disk].getPartitions()
+        for partition in partitions:
+            print ' --> {} {} {} {} {} {}'.format(partition,
+                                        partitions[partition].getMountpoint(),
+                                        partitions[partition].getFilesystem(),
+                                        partitions[partition].getSize(),
+                                        partitions[partition].getLabel(),
+                                        partitions[partition].getUUID())
+        print '\n'

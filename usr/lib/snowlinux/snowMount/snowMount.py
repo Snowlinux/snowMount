@@ -8,7 +8,7 @@ import commands
 
 from gi.repository import Gtk, Gio
 
-from drivereader import DriveReader
+import drivereader
 from fstab import Fstab
 
 
@@ -21,7 +21,7 @@ FSTAB_PATH = '/etc/fstab'
 
 class MainWindow(Gtk.Window):
     def __init__(self):
-        self.dr = DriveReader()
+        # self.dr = DriveReader()
         self.fstab = Fstab(FSTAB_PATH)
         builder = Gtk.Builder()
         builder.add_from_file('snowMount.ui')
@@ -66,30 +66,34 @@ class MainWindow(Gtk.Window):
         window.show_all()
 
     def createDiskStore(self):
-        self.disk_store.clear()
-        for disk in self.dr.getDisks():
-            self.disk_store.append(['{} ({})'.format(self.dr.getModel(disk), disk)])
+        disks = drivereader.get_disks()
+        for disk in disks:
+            self.disk_store.append(['{} ({})'.format(disks[disk].getModel(), disk)])
 
     def onButtonPressed(self, button):
+        self.disk_store.clear()
+        self.part_store.clear()
         self.createDiskStore()
 
     def onDiskCursorChanged(self, selection):
         model, treeiter = selection.get_selected()
         if treeiter is not None:
-            disk = model[treeiter][0].split()[-1][1:-1]
-            self.disk_label.set_text('{} ({})'.format(self.dr.getModel(disk), self.dr.getSize(disk)))
-            self.disk_label2.set_text(disk)
-            self.current_disk = disk
-            for part in self.dr.getParts(self.current_disk):
+            device_path = model[treeiter][0].split()[-1][1:-1]
+            disk = drivereader.get_disk(device_path)
+            self.disk_label.set_text('{} ({})'.format(disk.getModel(), disk.getSize()))
+            self.disk_label2.set_text(device_path)
+            # self.current_disk = device_path
+            for part in disk.getPartitions():
                 self.part_store.append([part, self.fstab.getFilesystem(part), self.fstab.getMountpoint(part), self.fstab.getMountoptions(part)])
 
     def onPartCursorChanged(self, selection):
         model, treeiter = selection.get_selected()
         if treeiter is not None:
-            part = model[treeiter][0]
-            self.part_filesystem.set_text(self.dr.getFilesystem(part))
-            self.part_size.set_text(self.dr.getSize(part))
-            self.part_label.set_text(self.dr.getLabel(part))
+            device_path = model[treeiter][0]
+            part = drivereader.get_partition(device_path)
+            self.part_filesystem.set_text(part.getFilesystem())
+            self.part_size.set_text(part.getSize())
+            self.part_label.set_text(part.getLabel())
 
 
 if __name__ == "__main__":

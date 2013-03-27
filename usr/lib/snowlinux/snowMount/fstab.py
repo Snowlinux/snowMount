@@ -2,7 +2,7 @@
 
 import os
 
-from drivereader import DriveReader
+import drivereader
 
 class Fstab(object):
     '''
@@ -21,26 +21,29 @@ class Fstab(object):
     '''
     def __init__(self, filename='/etc/fstab'):
         self._filename = filename
-        self._dr = DriveReader()
         self._fstab = {}
         with open(filename) as lines:
             for line in lines:
                 if not line.startswith('#') and line.strip():
                     if line.startswith('UUID'):
                         fs_spec = line.split()[0].split('=')[1]
-                        device = self._dr.getDevice(uuid=fs_spec)
+                        device = drivereader.get_device_path(uuid=fs_spec)
                         use_uuid = True
                     elif line.startswith('LABEL'):
                         label = line.split()[0].split('=')[1]
-                        device = self._dr.getDevice(label=label)
-                        fs_spec = self._dr.getUUID(device)
+                        device = drivereader.get_device_path(label=label)
+                        part = drivereader.get_partition(device)
+                        fs_spec = part.getUUID()
                         use_uuid = True
                     elif line.startswith('/dev/'):
                         device = line.split()[0]
                         try:
-                            fs_spec = self._dr.getUUID(device)
+                            part = drivereader.get_partition(device)
+                            fs_spec = part.getUUID()
                             use_uuid = True
-                        except KeyError:
+                        except Exception:
+                            print 'Exception ',
+                            print device
                             fs_spec = line.split()[0]
                             use_uuid = False
                     else:
@@ -75,7 +78,11 @@ class Fstab(object):
         else:
             return None
 
-    def updateFstab(self, device, mountpoint, mountoptions):
+    def updateFstab(self, device, mountpoint, mountoptions, filesystem):
+        try:
+            part = drivereader.get_partition(device)
+        except Exception:
+            part = None
         if mountpoint == '':
             del self._fstab[device]
 
@@ -93,14 +100,14 @@ class Fstab(object):
             else:
                 self._fstab[device]['fs_mntops'] = 'defaults'
         else:
-            try:
-                fs_spec = self._dr.getUUID(device)
+            if part:
+                fs_spec = part.getUUID()
                 use_uuid = True
-            except KeyError:
+            else:
                 fs_spec = device
                 use_uuid = False
             fs_file = mountpoint
-            fs_vfstype = self._dr.getFilesystem(device)
+            fs_vfstype = filesystem
             fs_mntops = 'defaults'
             fs_freq = '0'
 
@@ -137,8 +144,14 @@ if __name__ == '__main__':
     if not os.path.exists('/tmp/fstab'):
         os.system('cp -v /etc/fstab /tmp/')
     fstab = Fstab('/tmp/fstab')
-    print fstab.getFilesystem('/dev/sdb1')
-    # fstab.updateFstab('/dev/sdb1', '/tmp/tmpmnt', '')
-    # for key in fstab.getFstab():
-        # print repr(key)
-    # fstab.writeFstab()
+
+    for key in fstab._fstab:
+        print '{}:\n--> {}\n'.format(key, fstab._fstab[key])
+    
+    print'\nUpdating fstab ...\n'
+    fstab.updateFstab('/dev/sdb1', '/tmp/tmpmnt', '', 'ext2')
+
+    for key in fstab._fstab:
+        print '{}:\n--> {}\n'.format(key, fstab._fstab[key])
+
+    fstab.writeFstab()
