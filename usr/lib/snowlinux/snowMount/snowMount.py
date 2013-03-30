@@ -21,7 +21,6 @@ FSTAB_PATH = '/etc/fstab'
 
 class MainWindow(Gtk.Window):
     def __init__(self):
-        # self.dr = DriveReader()
         self.fstab = Fstab(FSTAB_PATH)
         builder = Gtk.Builder()
         builder.add_from_file('snowMount.ui')
@@ -33,14 +32,23 @@ class MainWindow(Gtk.Window):
         self.part_treeview = builder.get_object('part_treeview')
         self.part_store = Gtk.ListStore(str, str, str, str)
         self.part_treeview.set_model(self.part_store)
-        renderer = Gtk.CellRendererText()
-        column = Gtk.TreeViewColumn('Partition', renderer, text=0)
+        renderer_text = Gtk.CellRendererText()
+        renderer_filesystem_text = Gtk.CellRendererText()
+        renderer_filesystem_text.set_property('editable', True)
+        renderer_filesystem_text.connect('edited', self.onFileSystemEdited)
+        renderer_mountpoint_text = Gtk.CellRendererText()
+        renderer_mountpoint_text.set_property('editable', True)
+        renderer_mountpoint_text.connect('edited', self.onMountpointEdited)
+        renderer_mountoptions_text = Gtk.CellRendererText()
+        renderer_mountoptions_text.set_property('editable', True)
+        renderer_mountoptions_text.connect('edited', self.onMountoptionsEdited)
+        column = Gtk.TreeViewColumn('Partition', renderer_text, text=0)
         self.part_treeview.append_column(column)
-        column = Gtk.TreeViewColumn('Filesystem', renderer, text=1)
+        column = Gtk.TreeViewColumn('Filesystem', renderer_filesystem_text, text=1)
         self.part_treeview.append_column(column)
-        column = Gtk.TreeViewColumn('Mountpoint', renderer, text=2)
+        column = Gtk.TreeViewColumn('Mountpoint', renderer_mountpoint_text, text=2)
         self.part_treeview.append_column(column)
-        column = Gtk.TreeViewColumn('Options', renderer, text=3)
+        column = Gtk.TreeViewColumn('Options', renderer_mountoptions_text, text=3)
         self.part_treeview.append_column(column)
 
         self.part_filesystem = builder.get_object('part_filesystem')
@@ -57,10 +65,10 @@ class MainWindow(Gtk.Window):
 
         handlers = {
             'onDeleteWindow': Gtk.main_quit,
-            'onButtonPressed': self.onButtonPressed,
+            'onButtonRefreshPressed': self.onButtonRefreshPressed,
+            'onButtonSaveClicked': self.onButtonSaveClicked,
             'onDiskCursorChanged': self.onDiskCursorChanged,
-            'onPartCursorChanged': self.onPartCursorChanged
-        }
+            'onPartCursorChanged': self.onPartCursorChanged}
 
         builder.connect_signals(handlers)
         window.show_all()
@@ -70,19 +78,43 @@ class MainWindow(Gtk.Window):
         for disk in disks:
             self.disk_store.append(['{} ({})'.format(disks[disk].getModel(), disk)])
 
-    def onButtonPressed(self, button):
+    def onFileSystemEdited(self, widget, path, text):
+        self.part_store[path][1] = text
+
+    def onMountpointEdited(self, widget, path, text):
+        self.part_store[path][2] = text
+
+    def onMountoptionsEdited(self, widget, path, text):
+        self.part_store[path][3] = text
+
+    def updateFstab(self, path):
+        device_path = path[0]
+        filesystem = path[1]
+        mountpoint = path[2]
+        mountoptions = path[3]
+        self.fstab.updateFstab(device_path, mountpoint, mountoptions, filesystem)
+
+    def onButtonSaveClicked(self, button):
+        model, path = self.current_part[0], self.current_part[1]
+        self.updateFstab(model[path])
+
+
+    def onButtonRefreshPressed(self, button):
         self.disk_store.clear()
         self.part_store.clear()
+        self.part_filesystem.set_text('')
+        self.part_size.set_text('')
+        self.part_label.set_text('')
         self.createDiskStore()
 
     def onDiskCursorChanged(self, selection):
+        self.part_store.clear()
         model, treeiter = selection.get_selected()
         if treeiter is not None:
             device_path = model[treeiter][0].split()[-1][1:-1]
             disk = drivereader.get_disk(device_path)
             self.disk_label.set_text('{} ({})'.format(disk.getModel(), disk.getSize()))
             self.disk_label2.set_text(device_path)
-            # self.current_disk = device_path
             for part in disk.getPartitions():
                 self.part_store.append([part, self.fstab.getFilesystem(part), self.fstab.getMountpoint(part), self.fstab.getMountoptions(part)])
 
@@ -94,6 +126,7 @@ class MainWindow(Gtk.Window):
             self.part_filesystem.set_text(part.getFilesystem())
             self.part_size.set_text(part.getSize())
             self.part_label.set_text(part.getLabel())
+            self.current_part = (model, treeiter)
 
 
 if __name__ == "__main__":

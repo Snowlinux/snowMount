@@ -87,6 +87,9 @@ class Partition(object):
             self._size /= 1024.0
         return "%3.1f%s" % (self._size, 'TB')
 
+    def getDevicePath(self):
+        return self._device_path
+
     def getMountpoint(self):
         if self.isBusy():
             p = subprocess.check_output(['lsblk', '-Po', 'MOUNTPOINT', self._device_path])
@@ -98,7 +101,6 @@ class Partition(object):
         return self._partition.busy
 
 if __name__ == '__main__':
-    # print get_device_path('f8b392f2-4b9e-4a12-aa40-3b40817e99f3')
     part = get_partition('/dev/sdc1')
     print part.getUUID()
     disks = get_disks()

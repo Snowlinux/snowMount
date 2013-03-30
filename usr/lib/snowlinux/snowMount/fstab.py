@@ -42,8 +42,6 @@ class Fstab(object):
                             fs_spec = part.getUUID()
                             use_uuid = True
                         except Exception:
-                            print 'Exception ',
-                            print device
                             fs_spec = line.split()[0]
                             use_uuid = False
                     else:
@@ -95,6 +93,7 @@ class Fstab(object):
 
         if device in self._fstab:
             self._fstab[device]['fs_file'] = mountpoint
+            self._fstab[device]['fs_vfstype'] = filesystem
             if mountoptions != '':
                 self._fstab[device]['fs_mntops'] = mountoptions
             else:
