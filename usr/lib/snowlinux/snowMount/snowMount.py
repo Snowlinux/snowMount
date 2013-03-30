@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import re
 import sys
-import subprocess
 import commands
 
 from gi.repository import Gtk, Gio
@@ -63,10 +61,17 @@ class MainWindow(Gtk.Window):
         self.disk_treeview.append_column(column)
         self.createDiskStore()
 
+        self.aboutdialog = builder.get_object('aboutdialog')
+        self.aboutdialog.set_version(VERSION)
+        self.aboutdialog.set_license(LICENSE)
+        self.aboutdialog.set_copyright(COPYRIGHT)
+        self.aboutdialog.set_comments('A tool to manage mountpoints and options of devices.')
+
         handlers = {
             'onDeleteWindow': Gtk.main_quit,
-            'onButtonRefreshPressed': self.onButtonRefreshPressed,
+            'onButtonRefreshClicked': self.onButtonRefreshClicked,
             'onButtonSaveClicked': self.onButtonSaveClicked,
+            'onButtonAboutClicked': self.onButtonAboutClicked,
             'onDiskCursorChanged': self.onDiskCursorChanged,
             'onPartCursorChanged': self.onPartCursorChanged}
 
@@ -98,14 +103,17 @@ class MainWindow(Gtk.Window):
         model, path = self.current_part[0], self.current_part[1]
         self.updateFstab(model[path])
 
-
-    def onButtonRefreshPressed(self, button):
+    def onButtonRefreshClicked(self, button):
         self.disk_store.clear()
         self.part_store.clear()
         self.part_filesystem.set_text('')
         self.part_size.set_text('')
         self.part_label.set_text('')
         self.createDiskStore()
+
+    def onButtonAboutClicked(self, button):
+        self.aboutdialog.run()
+        self.aboutdialog.hide()
 
     def onDiskCursorChanged(self, selection):
         self.part_store.clear()
