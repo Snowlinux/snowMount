@@ -102,6 +102,7 @@ class MainWindow(Gtk.Window):
     def onButtonSaveClicked(self, button):
         model, path = self.current_part[0], self.current_part[1]
         self.updateFstab(model[path])
+        self.fstab.writeFstab()
 
     def onButtonRefreshClicked(self, button):
         self.disk_store.clear()
