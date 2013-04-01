@@ -21,7 +21,7 @@ class MainWindow(Gtk.Window):
     def __init__(self):
         self.fstab = Fstab(FSTAB_PATH)
         builder = Gtk.Builder()
-        builder.add_from_file('snowMount.ui')
+        builder.add_from_file('/usr/lib/snowlinux/snowMount/snowMount.ui')
         window = builder.get_object('main_window')
         self.disk_treeview = builder.get_object('disk_treeview')
         self.disk_label = builder.get_object('disk_label')
@@ -118,6 +118,9 @@ class MainWindow(Gtk.Window):
 
     def onDiskCursorChanged(self, selection):
         self.part_store.clear()
+        self.part_filesystem.set_text('')
+        self.part_size.set_text('')
+        self.part_label.set_text('')
         model, treeiter = selection.get_selected()
         if treeiter is not None:
             device_path = model[treeiter][0].split()[-1][1:-1]

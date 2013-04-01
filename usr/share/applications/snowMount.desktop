@@ -1,6 +1,7 @@
 
 [Desktop Entry]
 Name=snowMount
+Name[de_DE]=snowMount
 GenericName=snowMount
 Comment=Snowlinux tool for mounting devices
 Exec=gksudo /usr/bin/snowmount
@@ -8,5 +9,3 @@ Icon=/usr/lib/snowlinux/snowMount/icon.png
 Terminal=False
 Type=Application
 Categories=System;
-Name=snowMount
-Name[de_DE]=snowMount

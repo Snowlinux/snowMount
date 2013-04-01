@@ -9,5 +9,5 @@ Vcs-Browser: https://github.com/Snowlinux/snowMount
 Package: snowmount
 Architecture: all
 Depends: ${misc:Depends}
-Description: snowMount
- The Snowlinux mount tool.
+Description: Manage mountpoints and options of devices.
+ SnowMount is a tool to manage mountpoints and options of devices.
