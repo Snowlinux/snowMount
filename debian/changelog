@@ -1,3 +1,10 @@
+snowmount (2.0.1) flurry-unstable; urgency=low
+
+  * Added dependency python-parted
+    Removed unused menu items
+
+ -- Andy Jacobsen <atze@libra.uberspace.de>  Sun, 02 Jun 2013 21:15:15 +0200
+
 snowmount (2.0.0) flurry-unstable; urgency=low
 
   * From scratch rewrite
