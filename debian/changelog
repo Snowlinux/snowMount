@@ -1,8 +1,8 @@
-snowmount (2.0.0) flurry; urgency=low
+snowmount (2.0.0) flurry-unstable; urgency=low
 
-  * Improved snowMount
+  * From scratch rewrite
 
- -- Lars Torben Kremer <lars@snowlinux.de>  Tue, 19 Feb 2013 18:28:54 +0100
+ -- Andy Jacobsen <atze@libra.uberspace.de>  Sat, 01 Jun 2013 22:15:06 +0200
 
 snowmount (1.0.0) white; urgency=low
 
