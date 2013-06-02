@@ -4,8 +4,14 @@ snowmount (2.0.0) flurry-unstable; urgency=low
 
  -- Andy Jacobsen <atze@libra.uberspace.de>  Sat, 01 Jun 2013 22:15:06 +0200
 
+snowmount (1.0.2) frosty; urgency=low
+
+  * Fixed snowMount.desktop
+
+ -- Lars Torben Kremer <lars@snowlinux.de> Thu, 28 Mar 2013 14:22:29 +0100
+
 snowmount (1.0.0) white; urgency=low
 
   * Initial release.
 
- -- Lars Torben Kremer <lars@snowlinux.de>  Sun, 28 Oct 2012 16:55:52 +0100
+ -- Lars Torben Kremer <lars@snowlinux.de> Sun, 28 Oct 2012 16:55:52 +0100
